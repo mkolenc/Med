@@ -2,8 +2,8 @@
 #include <string.h>
 #include <assert.h>
 #include "render.h"
+#include "editor.h"
 #include "utils.h"
-#include "line.h"
 #include "font.h"
 #include "vec.h"
 #include "SDL.h"
@@ -38,7 +38,9 @@ void render_text_segment(SDL_Renderer *renderer, const Font *font, const char* t
     if (text_size == 0) return;
 
     set_texture_color(font->spritesheet, color);
-    assert(text_size <= strlen(text));
+    //assert(text_size <= strlen(text));
+    // This assert is bad beacuse, we don't copy the null terminator to the string, we are keeping track of it with the size field,
+    // so we may segfault or if the array is full of junk, run into a 0 or -1 which triggers this assertion
 
     for (size_t i = 0; i < text_size; i++) {
         render_char(renderer, font, text[i], pos, scale);
@@ -52,15 +54,21 @@ void render_text(SDL_Renderer* renderer, const Font* font, const char* text, Vec
     render_text_segment(renderer, font, text, strlen(text), pos, color, scale); 
 }
 
-static char* text_under_cursor(Line* line, size_t col)
+static char* text_under_cursor(Editor* editor)
 {
+    if (editor->size == 0)
+        return NULL;
+
+    Line* line = &editor->lines[editor->cursor_row];
+    size_t col = editor->cursor_col;
+
     return col < line->size ? &line->chars[col] : NULL;
 }
 
 // Functions for the cursor
 // eventually I want to have a struc for the cursor, and have the cursor color, and the text color under the cursor
 // and function to get and set theses parameters
-void render_cursor(SDL_Renderer* renderer, const Font* font, Line* line, size_t col, Vec2f pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
+void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, Vec2f pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
 {
     SDL_Rect dst = {
         .x = pos.x,
@@ -71,8 +79,8 @@ void render_cursor(SDL_Renderer* renderer, const Font* font, Line* line, size_t 
 
     scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
     scc(SDL_RenderFillRect(renderer, &dst));
-
-    const char* c = text_under_cursor(line, col);
+    
+    const char* c = text_under_cursor(editor);
     if (c != NULL) {
         set_texture_color(font->spritesheet, text_beneath_cursor_color);
         render_char(renderer, font, *c, pos, FONT_SCALE);

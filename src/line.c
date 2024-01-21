@@ -1,9 +1,17 @@
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 #include "line.h"
 #include "utils.h"
 
+#define LINE_INIT_CAPACITY 1024
+
+void line_init_members(Line* line)
+{
+    line->capacity = 0;
+    line->size = 0;
+    line->chars = NULL;
+}
 
 static void line_expand(Line* line, size_t n)
 {
@@ -23,34 +31,36 @@ static void line_expand(Line* line, size_t n)
     }
 }
 
-void line_insert_text(Line* line, char* text, size_t col)
+void line_insert_text_before_cursor(Line* line, char* text, size_t* col)
 {
     const size_t text_size = strlen(text);
     line_expand(line, text_size);
 
-    memmove(line->chars + col + text_size,
-            line->chars + col, 
-            line->size - col);
-    memcpy(line->chars + col, text, text_size);
+    memmove(line->chars + *col + text_size,
+            line->chars + *col, 
+            line->size - *col);
+    memcpy(line->chars + *col, text, text_size);
     line->size += text_size;
+    *col += text_size;
 }
 
-void line_backspace(Line *line, size_t col)
+void line_backspace(Line* line, size_t* col)
 {
-    if (col > 0 && line->size > 0) { // do i really nead both of these conditions? no, only col > 0
-        memmove(line->chars + col - 1,
-                line->chars + col,
-                line->size - col);
-        line->size -= 1;
+    if (*col > 0 && line->size > 0) { // do i really nead both of these conditions? no, only col > 0
+        memmove(line->chars + *col - 1,
+                line->chars + *col,
+                line->size - *col);
+        line->size--;
+        *col -= 1;
     }
 }
 
-void line_delete(Line *line, size_t col)
+void line_delete(Line* line, size_t* col)
 {
-    if (col < line->size && line->size > 0) {
-        memmove(line->chars + col,
-                line->chars + col + 1,
-                line->size - col);
-        line->size -= 1;
+    if (*col < line->size && line->size > 0) {
+        memmove(line->chars + *col,
+                line->chars + *col + 1,
+                line->size - *col);
+        line->size--;
     }
 }

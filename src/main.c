@@ -5,7 +5,8 @@
 #include "utils.h"
 #include "font.h"
 #include "render.h"
-#include "line.h"
+
+#include "editor.h"
 
 // Dependencies
 #include "SDL.h"
@@ -34,8 +35,7 @@ int main(int argc, const char* argv[])
 
     Font* font = font_load_ttf(renderer, "./font/VictorMono-Regular.ttf");
 
-    Line line = {.capacity = 0, .size = 0, .chars = NULL};
-    size_t col = 0;
+    Editor* editor = editor_init();
 
     bool quit = false;
     while (!quit) {
@@ -48,33 +48,53 @@ int main(int argc, const char* argv[])
                 break;
 
                 case SDL_TEXTINPUT: {
-                    line_insert_text(&line, event.text.text, col);
-                    col += strlen(event.text.text);
+                    editor_insert_text_before_cursor(editor, event.text.text);
                 }
                 break;
 
                 case SDL_KEYDOWN: {
                     switch (event.key.keysym.sym) {
                         case SDLK_BACKSPACE: {
-                            line_backspace(&line, col);
-                            if (col > 0)
-                                col--;
+                            editor_backspace(editor);
                         }
                         break;
 
                         case SDLK_DELETE: {
-                            line_delete(&line, col);
+                            editor_delete(editor);
                         } break;
 
                         case SDLK_LEFT: {
-                            if (col > 0)
-                                col--;
+                            if (editor->cursor_col > 0)
+                                editor->cursor_col--;
                         }
                         break;
 
                         case SDLK_RIGHT: {
-                            if (col < line.size)
-                                col++;
+                            if (editor->cursor_col < editor->lines[editor->cursor_row].size)
+                                editor->cursor_col++;
+                        }
+                        break;
+
+                        case SDLK_UP: {
+                            if (editor->cursor_row > 0)
+                                editor->cursor_row--;
+                        }
+                        break;
+
+                        case SDLK_DOWN: {
+                            if (editor->cursor_row < editor->size - 1)
+                                editor->cursor_row++;
+                        }
+                        break;
+                        
+                        case SDLK_RETURN: { // incomplete, needs to also shift line contents down, and insert line, and fix wierd stuff
+                            size_t prev_row_size = editor->lines[editor->cursor_row].size;
+                            editor->cursor_row++;
+                            size_t new_row_size = editor->lines[editor->cursor_row].size;
+                            if (new_row_size == 0)
+                                editor->cursor_col = 0;
+                            else if (new_row_size > 0 && new_row_size < prev_row_size)
+                                editor->cursor_col = new_row_size;
                         }
                         break;
                     }
@@ -86,16 +106,17 @@ int main(int argc, const char* argv[])
         scc((SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0)));
         scc((SDL_RenderClear(renderer)));
 
-        render_text_segment(renderer, font, line.chars, line.size, vec2f(0, 0), (SDL_Color) {.r = 255, .g = 255, .b = 255, .a = 255}, 1.0f);
-        render_cursor(renderer, font, &line, col, vec2f(col * FONT_WIDTH * FONT_SCALE, 0), (SDL_Color) {0, 255, 0, 255}, (SDL_Color) {0, 0, 0, 255});
+        for (size_t i = 0; i < editor->size; i++) {
+            render_text_segment(renderer, font, editor->lines[i].chars, editor->lines[i].size, vec2f(0, i * FONT_HEIGHT), (SDL_Color) {.r = 255, .g = 255, .b = 255, .a = 255}, 1.0f);
+        }
+        render_cursor(renderer, font, editor, vec2f(editor->cursor_col * FONT_WIDTH * FONT_SCALE, editor->cursor_row * FONT_HEIGHT * FONT_SCALE), (SDL_Color) {0, 255, 0, 255}, (SDL_Color) {0, 0, 0, 255});
 
         SDL_RenderPresent(renderer);
         
     }
+    editor_free(editor); // something is going wrong, with my free's
     font_free_ttf(font);
-    free(line.chars);
     sdl_clean_up(window, renderer, NULL, NULL);
     
     return 0;
 }
-

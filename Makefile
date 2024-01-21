@@ -10,7 +10,7 @@ LIBS = `pkg-config --libs sdl2` $(LDIRS) -lSDL2_ttf
 CFLAGS = -Wall -Wextra -std=c11 $(IDIRS)
 
 # Source files and object files
-SRC = main.c utils.c font.c render.c vec.c line.c
+SRC = main.c utils.c font.c render.c vec.c line.c editor.c
 OBJ = $(SRC:.c=.o)
 
 # The search path for all files not found in the current directory
@@ -21,7 +21,7 @@ all: $(BIN)
 $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) -o $(BIN) $(OBJ) $(LIBS)
 
-# $< is a magic variable and regers to the first dep
+# %< is a magic variable and regers to the first dep
 main.o: main.c utils.h font.h vec.h
 	$(CC) $(CFLAGS) -c $<
 
@@ -40,6 +40,12 @@ render.o: render.c render.h
 line.o: line.c line.h
 	$(CC) $(CFLAGS) -c $<
 
+editor.o: editor.c editor.h line.c line.h
+	$(CC) $(CFLAGS) -c $<
+
+
+# add $(OBJ) to rm after you know id doesn't delete everything
+# $(addprefix ./src/, $(OBJ))
 clean:
 	rm -f $(BIN) $(OBJ)
 
