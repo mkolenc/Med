@@ -5,6 +5,7 @@
 #include "line.h"
 
 #define LINE_INIT_CAPACITY 1024
+#define TAB_STOP 4
 
 // array of characters but actually a stretchy buffer
 // as it reallocates as you push more characters into it
@@ -18,5 +19,7 @@ void line_init_members(Line* line);
 void line_insert_text_before_cursor(Line* line, char* text, size_t* col);
 void line_backspace(Line *line, size_t* col);
 void line_delete(Line *line, size_t* col);
+
+void line_expand(Line* line, size_t n); // this was static but now i need it in editor.c, might change
 
 #endif /* LINE_H_ */

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "line.h"
 #include "utils.h"
 
@@ -13,7 +14,7 @@ void line_init_members(Line* line)
     line->chars = NULL;
 }
 
-static void line_expand(Line* line, size_t n)
+void line_expand(Line* line, size_t n) // this was static but now i need it in editor.c, might change
 {
     size_t new_capacity = line->capacity;
 
@@ -40,18 +41,32 @@ void line_insert_text_before_cursor(Line* line, char* text, size_t* col)
             line->chars + *col, 
             line->size - *col);
     memcpy(line->chars + *col, text, text_size);
+    
     line->size += text_size;
     *col += text_size;
 }
 
+static bool leading_whitespace(const Line* line, size_t col)
+{
+    for (size_t i = 0; i < col; i++) {
+        if (line->chars[i] != ' ')
+            return false;
+    }
+    return true;
+}
+
 void line_backspace(Line* line, size_t* col)
 {
+    size_t backspaces = 1;
+    if (leading_whitespace(line, *col))
+        backspaces = ((*col) % TAB_STOP == 0) ? TAB_STOP : (*col) % TAB_STOP;
+
     if (*col > 0 && line->size > 0) { // do i really nead both of these conditions? no, only col > 0
-        memmove(line->chars + *col - 1,
+        memmove(line->chars + *col - backspaces,
                 line->chars + *col,
                 line->size - *col);
-        line->size--;
-        *col -= 1;
+        line->size -= backspaces;
+        *col -= backspaces;
     }
 }
 

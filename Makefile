@@ -22,7 +22,7 @@ $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) -o $(BIN) $(OBJ) $(LIBS)
 
 # %< is a magic variable and regers to the first dep
-main.o: main.c utils.h font.h vec.h
+main.o: main.c utils.h font.h vec.h editor.h render.h
 	$(CC) $(CFLAGS) -c $<
 
 utils.o: utils.c utils.h
@@ -31,16 +31,16 @@ utils.o: utils.c utils.h
 vec.o: vec.c vec.h
 	$(CC) $(CFLAGS) -c $<
 
-font.o: font.c font.h
+font.o: font.c font.h utils.h
 	$(CC) $(CFLAGS) -c $<
 
-render.o: render.c render.h
+render.o: render.c render.h editor.h utils.h font.h vec.h
 	$(CC) $(CFLAGS) -c $<
 
-line.o: line.c line.h
+line.o: line.c line.h utils.h
 	$(CC) $(CFLAGS) -c $<
 
-editor.o: editor.c editor.h line.c line.h
+editor.o: editor.c editor.h line.h utils.h
 	$(CC) $(CFLAGS) -c $<
 
 

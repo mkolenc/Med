@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "font.h"
 #include "render.h"
+#include "vec.h"
 
 #include "editor.h"
 
@@ -48,66 +49,63 @@ int main(int argc, const char* argv[])
                 break;
 
                 case SDL_TEXTINPUT: {
-                    editor_insert_text_before_cursor(editor, event.text.text);
+                    editor_insert_text_before_cursor(editor, event.text.text); 
+                    //printf("EDITOR: capacity %zu, size %zu, row %zu, col %zu\n", editor->capacity, editor->size, editor->cursor_row, editor->cursor_col);
+                    //printf("LINE: capacity %zu, size %zu\n", editor->lines[editor->cursor_row].capacity, editor->lines[editor->cursor_row].size);
                 }
                 break;
 
                 case SDL_KEYDOWN: {
                     switch (event.key.keysym.sym) {
                         case SDLK_BACKSPACE: {
-                            editor_backspace(editor);
+                            editor_backspace(editor); // done
                         }
                         break;
 
                         case SDLK_DELETE: {
-                            editor_delete(editor);
+                            editor_delete(editor); // done
                         } break;
 
                         case SDLK_LEFT: {
-                            if (editor->cursor_col > 0)
-                                editor->cursor_col--;
+                            editor_left_arrow(editor); // done
                         }
                         break;
 
                         case SDLK_RIGHT: {
-                            if (editor->cursor_col < editor->lines[editor->cursor_row].size)
-                                editor->cursor_col++;
+                            editor_right_arrow(editor); // done
                         }
                         break;
 
                         case SDLK_UP: {
-                            if (editor->cursor_row > 0)
-                                editor->cursor_row--;
+                            editor_up_arrow(editor); // done
                         }
                         break;
 
                         case SDLK_DOWN: {
-                            if (editor->cursor_row < editor->size - 1)
-                                editor->cursor_row++;
+                            editor_down_arrow(editor); // done
                         }
                         break;
                         
-                        case SDLK_RETURN: { // incomplete, needs to also shift line contents down, and insert line, and fix wierd stuff
-                            size_t prev_row_size = editor->lines[editor->cursor_row].size;
-                            editor->cursor_row++;
-                            size_t new_row_size = editor->lines[editor->cursor_row].size;
-                            if (new_row_size == 0)
-                                editor->cursor_col = 0;
-                            else if (new_row_size > 0 && new_row_size < prev_row_size)
-                                editor->cursor_col = new_row_size;
+                        case SDLK_RETURN: { // done 
+                            editor_return(editor);
                         }
                         break;
+
+                        case SDLK_TAB: {
+                            // I am just going to insert spaces (atleast for now) to make file editing easier,
+                            // and to conserve space when you save a file, convert 4 spaces into a single \t character
+                            editor_tab(editor); // done
+                        }
                     }
                     break;
                 }
             }            
         }
-        
         scc((SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0)));
         scc((SDL_RenderClear(renderer)));
 
         for (size_t i = 0; i < editor->size; i++) {
-            render_text_segment(renderer, font, editor->lines[i].chars, editor->lines[i].size, vec2f(0, i * FONT_HEIGHT), (SDL_Color) {.r = 255, .g = 255, .b = 255, .a = 255}, 1.0f);
+            render_text_segment(renderer, font, editor->lines[i].chars, editor->lines[i].size, vec2f(0, i * FONT_HEIGHT * FONT_SCALE), (SDL_Color) {.r = 255, .g = 255, .b = 255, .a = 255}, FONT_SCALE);
         }
         render_cursor(renderer, font, editor, vec2f(editor->cursor_col * FONT_WIDTH * FONT_SCALE, editor->cursor_row * FONT_HEIGHT * FONT_SCALE), (SDL_Color) {0, 255, 0, 255}, (SDL_Color) {0, 0, 0, 255});
 
@@ -120,3 +118,4 @@ int main(int argc, const char* argv[])
     
     return 0;
 }
+

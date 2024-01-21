@@ -27,6 +27,7 @@ static SDL_Surface* create_font_surface(const char* file_path)
     return font_surface;
 }
 
+
 Font* font_load_ttf(SDL_Renderer* renderer, const char* file_path)
 {
     Font* font = cp(malloc(sizeof(*font)));

@@ -6,6 +6,8 @@
 
 #define EDITOR_INIT_CAPACITY 128
 
+
+
 // sequence of lines but also a stretchy buffer as it
 // reallocates as you push more lines into it
 typedef struct {
@@ -25,9 +27,15 @@ void editor_free(Editor* editor);
 void editor_insert_text_before_cursor(Editor* editor, char* text);
 void editor_backspace(Editor* editor);
 void editor_delete(Editor* editor);
+void editor_left_arrow(Editor* editor);
+void editor_right_arrow(Editor* editor);
+void editor_up_arrow(Editor* editor);
+void editor_down_arrow(Editor* editor);
+void editor_return(Editor* editor);
+void editor_tab(Editor* editor);
 // void editor_insert_new_line(Editor* editor);
 // const char* editor_char_under_cursor(Editor* editor);
 // void editor_save_to_file(Editor* editor, const char* file_path);
 
 
-#endif /* EDITOR_H_ */
+#endif /* EDITOR_H_ */ 
