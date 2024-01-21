@@ -1,24 +1,34 @@
+/*
+*  The operations and data structure of the text editor.
+*/
 #include <assert.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+
 #include "editor.h"
 #include "line.h"
 #include "utils.h"
 #include "SDL.h"
 
-static int last_input = 0;
+static int last_input = SDLK_UNKNOWN;
 
-// on the first call, allocates EDItor_INIT_Capacity of lines and then initilisez them to 0
-// On future calls, if space is required, doulbes the allocated space and initilizes the new space
-// if it isn't required, it does nothing: note, n is the number of new lines we want to add/exapnt to fit
+/*
+ *  Purpose: Expand the capacity of a Editor structure to accommodate additional lines.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the editor structure to expand.
+ *    - n: The number of additional lines to accommodate.
+ * 
+ *  Returns: None.
+ */
 static void editor_expand(Editor* editor, size_t n)
 {
     size_t new_capacity = editor->capacity;
-
     assert(new_capacity >= editor->size);
+
     while (new_capacity - editor->size < n) // while free_space < n new lines
         if (new_capacity == 0)
             new_capacity = EDITOR_INIT_CAPACITY;
@@ -26,122 +36,157 @@ static void editor_expand(Editor* editor, size_t n)
             new_capacity *= 2;
 
     if (new_capacity != editor->capacity) {
-        editor->lines = cp(realloc(editor->lines, new_capacity * sizeof(editor->lines[0])));
+        editor->lines = utils_cp(realloc(editor->lines, new_capacity * sizeof(editor->lines[0])));
 
-        for (size_t i = editor->capacity; i < new_capacity; i++)
-            line_init_members(&editor->lines[i]);
+        size_t old_capacity = editor->capacity;
+        memset(editor->lines + old_capacity, 0, (new_capacity - old_capacity) * sizeof(editor->lines[0]));
         editor->capacity = new_capacity;
     }
 }
 
+/*
+ *  Purpose: Push a new line to the Editor structure, expanding its capacity if necessary.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure to which the new line will be added.
+ * 
+ *  Returns: None.
+ */
 static void editor_push_new_line(Editor* editor)
 {
     editor_expand(editor, 1);
     editor->size++;;
 }
 
-Editor* editor_init(void)
+/*
+ *  Purpose: Ensure that the first line is initialized when the editor is empty. This function 
+ *           needs to be called before your first line operation.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure to check and initialize if necessary.
+ * 
+ *  Returns: None.
+ */
+static void editor_handle_first_line(Editor* editor)
 {
-    Editor* editor = cp(malloc(sizeof(*editor)));
-
-    editor->lines = NULL;
-    editor->capacity = 0;
-    editor->size = 0;
-    editor->cursor_col = 0;
-    editor->cursor_row = 0;
-
-    return editor;
+    if (editor->size == 0)
+        editor_push_new_line(editor);
 }
 
-void editor_free(Editor* editor)
-{
-    for (size_t i = 0; i < editor->size; i++)
-        free(editor->lines[i].chars);
-    free(editor->lines);
-    free(editor);
-}
-
+/*
+ *  Purpose: Insert text before the cursor in the Editor's current line.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ *    - text: The text to be inserted.
+ * 
+ *  Returns: None.
+ */
 void editor_insert_text_before_cursor(Editor* editor, char* text)
 {
-    // The cursor_row is 0 based and the size is 1 based, so the 0th row is the first line
-    // so if the cursor_row == size, we need to add more lines, or it hasn't been init yet
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
     line_insert_text_before_cursor(&editor->lines[editor->cursor_row], text, &editor->cursor_col);
     last_input = SDL_TEXTINPUT;
 }
 
+/*
+ *  Purpose: Delete the character before the cursor in the editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_backspace(Editor *editor) 
 {
-    if (editor->cursor_row == editor->size) // its not shifting ht botom line up
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
-    if (editor->cursor_col == 0 && editor->cursor_row > 0) { // multiple lines
+    // If cursor is at the start of a line (not the first line), move text to the previous line.
+    if (editor->cursor_col == 0 && editor->cursor_row > 0) {
         Line* curr_line = editor->lines + editor->cursor_row;
-        Line* dst_line = curr_line - 1;
+        Line* prev_line = curr_line - 1;
 
-        // copy any trailing characters onto the destination line and update
-        size_t trailing_chars = curr_line->size; // cursor_col is 0 so it must be the whole line
-        line_expand(dst_line, trailing_chars);
-        memcpy(dst_line->chars + dst_line->size, curr_line->chars, trailing_chars);
-        dst_line->size += trailing_chars;
+        // Copy characters from the current line to the previous line.
+        size_t num_copy_chars = curr_line->size;
+        line_expand(prev_line, num_copy_chars);
+        memcpy(prev_line->chars + prev_line->size, curr_line->chars, num_copy_chars);
+        prev_line->size += num_copy_chars;
 
-        // curr_line data has been copied, chars buffer needs to be freed
+        // Free the char buffer of the current line since its data has been copied.
         free(curr_line->chars);
 
-        // shift all of the lines up
+        // Shift all lines up to fill the gap.
         size_t lines_to_shift = editor->size - editor->cursor_row - 1;
         memmove(curr_line, curr_line + 1, lines_to_shift * sizeof(*curr_line));
 
-        // The last line has been moved up so we still have its data, need to reset this line
-        // so future inserts don't mess up our other lines /or cause segfaults
-        line_init_members(editor->lines + editor->size - 1);
+        // Reset the last line to ensure future operations work correctly.
+        memset(editor->lines + editor->size - 1, 0, sizeof(*curr_line));
 
-        // update the changes to lines and editor
+        // update the line and editor data
         editor->size--;
         editor->cursor_row--;
-        editor->cursor_col = dst_line->size - trailing_chars;
-    } else
-        line_backspace(&editor->lines[editor->cursor_row], &editor->cursor_col);
-    last_input = SDLK_BACKSPACE;
+        editor->cursor_col = prev_line->size - num_copy_chars;
+    } else {
+        // If not at the start of a line, perform a regular backspace within the line.
+        line_backspace(editor->lines + editor->cursor_row, &editor->cursor_col);
+    }
+
+    last_input = SDLK_BACKSPACE; 
 }
 
+/*
+ *  Purpose: Delete the character after the cursor in the Editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_delete(Editor *editor)
 {
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
     if (editor->cursor_col == editor->lines[editor->cursor_row].size && editor->cursor_row < editor->size - 1) {
+        // If cursor is at the end of a line and not the last line in the file, move text from the next line to the current line.
         Line* curr_line = editor->lines + editor->cursor_row;
+        Line* next_line = curr_line + 1;
 
-        // copy any trailing characters onto the destination line and update
-        size_t trailing_chars = (curr_line + 1)->size; // cursor_col is 0 so it must be the whole line
-        line_expand(curr_line, trailing_chars);
-        memcpy(curr_line->chars + curr_line->size, (curr_line + 1)->chars, trailing_chars);
-        curr_line->size += trailing_chars;
+        // Copy characters from the next line to the end of the current line.
+        size_t num_copy_chars = next_line->size;
+        line_expand(curr_line, num_copy_chars);
+        memcpy(curr_line->chars + curr_line->size, next_line->chars, num_copy_chars);
+        curr_line->size += num_copy_chars;
 
-        // curr_line data has been copied, chars buffer needs to be freed
-        free((curr_line + 1)->chars);
+        // Free the char buffer of the next line since its data has been copied.
+        free(next_line->chars);
 
-        // shift all of the lines up
+        // Shift all lines up to fill the gap.
         size_t lines_to_shift = editor->size - editor->cursor_row - 2;
-        memmove(curr_line + 1, curr_line + 2, lines_to_shift * sizeof(*curr_line));
+        memmove(next_line, next_line + 1, lines_to_shift * sizeof(*curr_line));
 
-        // The last line has been moved up so we still have its data, need to reset this line
-        // so future inserts don't mess up our other lines /or cause segfaults
-        line_init_members(editor->lines + editor->size - 1);
+        // Reset the last line to ensure future operations work correctly.
+        memset(editor->lines + editor->size - 1, 0, sizeof(*curr_line));
 
         // update the changes to lines and editor
         editor->size--;
-    } else
-        line_delete(&editor->lines[editor->cursor_row], &editor->cursor_col);
+    } else {
+        // If not at the end of a line, perform a regular delete operation within the line.
+        line_delete(editor->lines + editor->cursor_row, &editor->cursor_col);
+    }
+
     last_input = SDLK_DELETE;
 }
-
+/*
+ *  Purpose: Move the cursor one position to the left in the Editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_left_arrow(Editor* editor)
 {
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
     if (editor->cursor_col > 0)
         editor->cursor_col--;
@@ -152,10 +197,17 @@ void editor_left_arrow(Editor* editor)
     last_input = SDLK_LEFT;
 }
 
+/*
+ *  Purpose: Move the cursor one position to the right in the Editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_right_arrow(Editor* editor)
 {
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
     if (editor->cursor_col < editor->lines[editor->cursor_row].size) 
         editor->cursor_col++;
@@ -166,10 +218,17 @@ void editor_right_arrow(Editor* editor)
     last_input = SDLK_RIGHT;
 }
 
+/*
+ *  Purpose: Move the cursor one line up in the Editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_up_arrow(Editor* editor)
 {
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
     static size_t start_col = 0;
 
@@ -188,15 +247,22 @@ void editor_up_arrow(Editor* editor)
         last_input = SDLK_UP;
     }
 }
-    
+
+/*
+ *  Purpose: Move the cursor one line down in the Editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_down_arrow(Editor* editor)
 {
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
     static size_t start_col = 0;
 
-    size_t bottom_line_size = editor->lines[editor->size].size;
+    size_t bottom_line_size = editor->lines[editor->size - 1].size;
     if (editor->cursor_row == editor->size - 1)
         editor->cursor_col = bottom_line_size;
     else {
@@ -213,20 +279,26 @@ void editor_down_arrow(Editor* editor)
     }
 }
 
-
-/* creates a new line, underneath current one, shift chars down if there are to rigth to cursor, works with whitespace indent*/
-void editor_return(Editor* editor) {
+/*
+ *  Purpose: Create a new line underneath the current one, shifting characters as needed with whitespace indentation.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
+void editor_return(Editor* editor)
+{
     // Create space for a new line
     editor_push_new_line(editor);
 
     // Calculate pointers for the source and destination lines
     Line* curr_line = editor->lines + editor->cursor_row;
-    Line* src_line = curr_line + 1;
-    Line* dst_line = curr_line + 2;
+    Line* next_line = curr_line + 1;
 
-    // Move lines down
+    // Move lines down, making space for the new line
     size_t lines_down = editor->size - editor->cursor_row - 1;
-    memmove(dst_line, src_line, lines_down * sizeof(*curr_line));
+    memmove(next_line + 1, next_line, lines_down * sizeof(*curr_line));
 
     // Calculate the number of characters for whitespace indentation
     size_t indentation = 0;
@@ -240,32 +312,130 @@ void editor_return(Editor* editor) {
             break;
     }
 
-    // Initialize and reallocate the source line
-    size_t num_carry_chars = curr_line->size - editor->cursor_col;
-    line_init_members(src_line);
-    line_expand(src_line, num_carry_chars + indentation);
+    // Initialize and reallocate the next line
+    size_t num_copy_chars = curr_line->size - editor->cursor_col;
+    memset(next_line, 0, sizeof(*next_line));
+    line_expand(next_line, num_copy_chars + indentation);
 
     // Copy whitespace and characters to the new line
-    memset(src_line->chars, ' ', indentation); ///////////////////// this needs to be updated to not just be spaces, but tabs too
-    memcpy(src_line->chars + indentation, &curr_line->chars[editor->cursor_col], num_carry_chars);
+    memset(next_line->chars, ' ', indentation);
+    memcpy(next_line->chars + indentation, curr_line->chars + editor->cursor_col, num_copy_chars);
 
     // Update line sizes and cursor position
-    curr_line->size -= num_carry_chars;
-    src_line->size += num_carry_chars + indentation;
+    curr_line->size -= num_copy_chars;
+    next_line->size += num_copy_chars + indentation;
     editor->cursor_row++;
     editor->cursor_col = indentation;
 }
 
+/*
+ *  Purpose: Insert a tab character at the cursor position in the Editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
 void editor_tab(Editor* editor)
 {
-    if (editor->cursor_row == editor->size)
-        editor_push_new_line(editor);
+    editor_handle_first_line(editor);
 
-    size_t spaces = TAB_STOP - (editor->cursor_col % TAB_STOP);
+    size_t num_spaces = TAB_STOP - (editor->cursor_col % TAB_STOP);
 
-    char tab_str[spaces + 1];
-    memset(tab_str, ' ', spaces);
-    tab_str[spaces] = '\0';
+    char tab_str[num_spaces + 1];
+    memset(tab_str, ' ', num_spaces);
+    tab_str[num_spaces] = '\0';
 
     editor_insert_text_before_cursor(editor, tab_str);
+}
+
+/*
+ *  Purpose: Save the contents of the Editor to a file at the specified file path.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ *    - file_path: The path to the file where the contents will be saved.
+ * 
+ *  Returns: None.
+ */
+void editor_save_to_file(const Editor* editor, const char* file_path)
+{
+    FILE* fp = fopen(file_path, "w");
+    if (fp == NULL) {
+        fprintf(stdout, "ERROR: could not open file `%s`: %s\n", file_path, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t row = 0; row < editor->size; row++) {
+        size_t bytes_to_write = editor->lines[row].size;
+        if (fwrite(editor->lines[row].chars, 1, bytes_to_write, fp) != bytes_to_write)
+            fputs("Error saving file", fp);
+        if (row != editor->size - 1)
+            fputc('\n', fp);
+    }
+    fclose(fp);
+}
+
+/*
+ *  Purpose: Load text data from a file and populate the Editor with its contents.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure to populate.
+ *    - fp: File pointer to the file from which to read the contents.
+ * 
+ *  Returns: None.
+ */
+void editor_load_from_file(Editor* editor, FILE* fp)
+{
+    // Ensure that the editor is empty before loading a file
+    assert(editor->lines == NULL && "Can only load files into an empty editor...for now");
+
+    static char chunk[EDITOR_INIT_CAPACITY * LINE_INIT_CAPACITY];
+    bool new_line = true;
+
+    while (!feof(fp)) {
+        size_t bytes_read = fread(chunk, 1, EDITOR_INIT_CAPACITY * LINE_INIT_CAPACITY, fp);
+        char* line_start = chunk;
+        char* line_end = memchr(chunk, '\n', bytes_read); // Similar to strchr but bounded by bytes_read
+
+        while (line_end != NULL) { // A new line to process
+            if (new_line)
+                editor_push_new_line(editor);
+
+            Line* current_line = editor->lines + editor->size - 1;
+
+            size_t text_size = line_end - line_start;
+            line_append_text_segment(current_line, line_start, text_size);
+
+            bytes_read -= text_size + 1;
+            line_start = line_end + 1;
+            line_end = memchr(line_start, '\n', bytes_read);
+            new_line = true;
+        }
+
+        // If there are characters remaining on the current line, append them
+        if (bytes_read > 0) {
+            if (new_line)
+                editor_push_new_line(editor);
+
+            Line* current_line = editor->lines + editor->size - 1;
+            line_append_text_segment(current_line, line_start, bytes_read);
+            new_line = false;
+        }
+    }
+}
+
+/*
+ *  Purpose: Free the memory allocated for the Editor's lines and associated data.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure.
+ * 
+ *  Returns: None.
+ */
+void editor_free(Editor* editor)
+{
+    for (size_t i = 0; i < editor->size; i++)
+        free(editor->lines[i].chars);
+    free(editor->lines);
 }

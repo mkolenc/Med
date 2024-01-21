@@ -1,17 +1,54 @@
 /*
-  SDL utility functions for error handling and deallocating sdl resources
-*/
-
+ *  Utility functions for error handling and resource cleanup in an SDL-based application.
+ */
 #ifndef UTILS_H_
 #define UTILS_H_
 
 #include "SDL.h"
+#include "font.h"
+#include "editor.h"
 
-void scc(int error_code);
-void tcc(int error_code);
-void* scp(void* ptr);
-void* cp(void* ptr);
+/*
+ *  Purpose: Handle SDL errors, check the error code, and exit on failure.
+ *
+ *  Parameters:
+ *    - error_code: The error code to be checked.
+ */
+void utils_scc(int error_code);
 
-void sdl_clean_up(SDL_Window* window, SDL_Renderer* renderer, SDL_Surface* surface, SDL_Texture* texture);
+/*
+ *  Purpose: Handle SDL pointer errors, check if a pointer is NULL, and exit on failure.
+ *
+ *  Parameters:
+ *    - ptr: The pointer to be checked.
+ *
+ *  Returns:
+ *    - The same pointer if it is not NULL.
+ */
+void* utils_scp(void* ptr);
+
+/*
+ *  Purpose: Handle general pointer errors, check if a pointer is NULL, and exit on failure.
+ *
+ *  Parameters:
+ *    - ptr: The pointer to be checked.
+ *
+ *  Returns:
+ *    - The same pointer if it is not NULL.
+ */
+void* utils_cp(void* ptr);
+
+/*
+ *  Purpose: Perform cleanup by freeing resources and quitting SDL and related libraries.
+ *
+ *  Parameters:
+ *    - window: A pointer to an SDL window to be destroyed.
+ *    - renderer: A pointer to an SDL renderer to be destroyed.
+ *    - font: A pointer to a Font structure to be freed.
+ *    - editor: A pointer to an Editor structure to be freed.
+ *
+ *  Returns: None.
+ */
+void utils_clean_up(SDL_Window* window, SDL_Renderer* renderer, Font* font, Editor* editor);
 
 #endif /* UTILS_H_ */

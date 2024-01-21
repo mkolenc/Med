@@ -1,6 +1,9 @@
+/*
+ *  Contains functions for rendering text and graphical elements using SDL.
+ */
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+
 #include "render.h"
 #include "editor.h"
 #include "utils.h"
@@ -8,7 +11,18 @@
 #include "vec.h"
 #include "SDL.h"
 
-// Renders a single char to the window
+/*
+ *  Purpose: Render a single character to the window using a specified font and position.
+ *
+ *  Parameters:
+ *    - renderer: Pointer to the SDL renderer where the character is rendered.
+ *    - font: Pointer to the Font structure used for rendering.
+ *    - c: The character to be rendered.
+ *    - pos: The position (Vec2f) where the character is rendered.
+ *    - scale: The scaling factor for the character's size.
+ *
+ *  Returns: None.
+ */
 void render_char(SDL_Renderer* renderer, const Font* font, char c, Vec2f pos, float scale)
 {
     SDL_Rect dst = {
@@ -22,25 +36,41 @@ void render_char(SDL_Renderer* renderer, const Font* font, char c, Vec2f pos, fl
     if (c >= ASCII_DISPLAY_LOW && c <= ASCII_DISPLAY_HIGH)
         index = c - ASCII_DISPLAY_LOW;
 
-    scc(SDL_RenderCopy(renderer, font->spritesheet, &font->glyphs[index], &dst));
+    utils_scc(SDL_RenderCopy(renderer, font->spritesheet, &font->glyphs[index], &dst));
 }
 
-// private function used to set the color of the text on screen
-static void set_texture_color(SDL_Texture *texture, SDL_Color color)
+/*
+ *  Purpose: Set the color of an SDL texture to the specified SDL_Color.
+ *
+ *  Parameters:
+ *    - texture: Pointer to the SDL texture for color modification.
+ *    - color: The SDL_Color to set for the texture.
+ *
+ *  Returns: None.
+ */
+static void set_texture_color(SDL_Texture* texture, SDL_Color color)
 {
-    scc(SDL_SetTextureColorMod(texture, color.r, color.g, color.b));
-    scc(SDL_SetTextureAlphaMod(texture, color.a));
+    utils_scc(SDL_SetTextureColorMod(texture, color.r, color.g, color.b));
+    utils_scc(SDL_SetTextureAlphaMod(texture, color.a));
 }
 
-// renders a substring of text on the screen
-void render_text_segment(SDL_Renderer *renderer, const Font *font, const char* text, size_t text_size, Vec2f pos, SDL_Color color, float scale)
+/**
+ *  Purpose: Render a substring of text on the screen using a specified font, color, and position.
+ *
+ *  Parameters:
+ *    - renderer: Pointer to the SDL renderer where the text is rendered.
+ *    - font: Pointer to the Font structure used for rendering.
+ *    - text: Pointer to the text segment to be rendered.
+ *    - text_size: The size of the text segment.
+ *    - pos: The position (Vec2f) where the text is rendered.
+ *    - color: The color for the rendered text.
+ *    - scale: The scaling factor for the text's size.
+ *
+ *  Returns: None.
+ */
+void render_text_segment(SDL_Renderer* renderer, const Font* font, const char* text, size_t text_size, Vec2f pos, SDL_Color color, float scale)
 {
-    if (text_size == 0) return;
-
     set_texture_color(font->spritesheet, color);
-    //assert(text_size <= strlen(text));
-    // This assert is bad beacuse, we don't copy the null terminator to the string, we are keeping track of it with the size field,
-    // so we may segfault or if the array is full of junk, run into a 0 or -1 which triggers this assertion
 
     for (size_t i = 0; i < text_size; i++) {
         render_char(renderer, font, text[i], pos, scale);
@@ -48,41 +78,71 @@ void render_text_segment(SDL_Renderer *renderer, const Font *font, const char* t
     }
 }
 
-// renders a full string on the screen
+/*
+ *  Purpose: Render a full null-terminated string on the screen using a specified font, color, and position.
+ *
+ *  Parameters:
+ *    - renderer: Pointer to the SDL renderer where the text is rendered.
+ *    - font: Pointer to the Font structure used for rendering.
+ *    - text: Pointer to the null-terminated string to be rendered.
+ *    - pos: The position (Vec2f) where the text is rendered.
+ *    - color: The color for the rendered text.
+ *    - scale: The scaling factor for the text's size.
+ *
+ *  Returns: None.
+ */
 void render_text(SDL_Renderer* renderer, const Font* font, const char* text, Vec2f pos, SDL_Color color, float scale)
 {
-    render_text_segment(renderer, font, text, strlen(text), pos, color, scale); 
+    render_text_segment(renderer, font, text, strlen(text), pos, color, scale);
 }
 
+/*
+ *  Purpose: Retrieve the character under the cursor in the text editor.
+ *
+ *  Parameters:
+ *    - editor: Pointer to the Editor structure containing the text.
+ *
+ *  Returns:
+ *    - Pointer to the character under the cursor, or NULL if the cursor is outside the text bounds.
+ */
 static char* text_under_cursor(Editor* editor)
 {
     if (editor->size == 0)
         return NULL;
 
-    Line* line = &editor->lines[editor->cursor_row];
+    Line* line = editor->lines + editor->cursor_row;
     size_t col = editor->cursor_col;
 
-    return col < line->size ? &line->chars[col] : NULL;
+    return col < line->size ? line->chars + col : NULL;
 }
 
-// Functions for the cursor
-// eventually I want to have a struc for the cursor, and have the cursor color, and the text color under the cursor
-// and function to get and set theses parameters
-void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, Vec2f pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
+/*
+ *  Purpose: Render the cursor at the current cursor position in the text editor using specified colors.
+ *
+ *  Parameters:
+ *    - renderer: Pointer to the SDL renderer where the cursor is rendered.
+ *    - font: Pointer to the Font structure for rendering text beneath the cursor.
+ *    - editor: Pointer to the Editor structure containing the text and cursor position.
+ *    - cursor_color: The color for rendering the cursor.
+ *    - text_beneath_cursor_color: The color for rendering text beneath the cursor.
+ *
+ *  Returns: None.
+ */
+void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
 {
     SDL_Rect dst = {
-        .x = pos.x,
-        .y = pos.y,
+        .x = editor->cursor_col * FONT_WIDTH * FONT_SCALE,
+        .y = editor->cursor_row * FONT_HEIGHT * FONT_SCALE,
         .w = FONT_WIDTH * FONT_SCALE,
         .h = FONT_HEIGHT * FONT_SCALE,
     };
 
-    scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
-    scc(SDL_RenderFillRect(renderer, &dst));
+    utils_scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
+    utils_scc(SDL_RenderFillRect(renderer, &dst));
     
     const char* c = text_under_cursor(editor);
     if (c != NULL) {
         set_texture_color(font->spritesheet, text_beneath_cursor_color);
-        render_char(renderer, font, *c, pos, FONT_SCALE);
+        render_char(renderer, font, *c, vec2f(dst.x, dst.y), FONT_SCALE);
     }
 }

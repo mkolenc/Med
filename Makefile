@@ -25,7 +25,7 @@ $(BIN): $(OBJ)
 main.o: main.c utils.h font.h vec.h editor.h render.h
 	$(CC) $(CFLAGS) -c $<
 
-utils.o: utils.c utils.h
+utils.o: utils.c utils.h font.h editor.h
 	$(CC) $(CFLAGS) -c $<
 
 vec.o: vec.c vec.h
