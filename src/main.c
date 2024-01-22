@@ -11,6 +11,9 @@
 #include "editor.h"
 #include "camera.h"
 
+
+#include <math.h> // newly added for floor
+
 // Dependencies
 #include "SDL.h"
 #include "SDL_ttf.h"
@@ -55,6 +58,11 @@ int main(int argc, const char* argv[])
         }
     }
 
+    CursorShape cursor_shape = 0;
+    const float cursor_period_ms = 500; // half a second
+    Uint32 last_stroke_time = 0;
+    const Uint32 blink_threshold_ms = 500; // an issue here is that sometimew hwen it starts blinking agin it is quick on the first one and sometimes it is long
+                                            // thsi is becuase the cursor is always blinking and we may start rendering it again in the middle of a period
     bool quit = false;
     while (!quit) {
         // start of the frame time
@@ -69,6 +77,7 @@ int main(int argc, const char* argv[])
 
                 case SDL_TEXTINPUT: {
                     editor_insert_text_before_cursor(&editor, event.text.text);
+                    last_stroke_time = SDL_GetTicks();
                 }
                 break;
 
@@ -116,12 +125,20 @@ int main(int argc, const char* argv[])
                         case SDLK_F2: {
                             if (file_path != NULL) {
                                 editor_save_to_file(&editor, file_path);
-				puts("Save successful!");
+				                puts("Save successful!");
                             } else
-                                fprintf(stderr, "Usage: ./te [FILE-PATH]\n");
+                                fprintf(stderr, "Usage: ./med [FILE-PATH]\n");
                         }
                         break;
+
+                        case SDLK_F1: {
+                            if (cursor_shape < 2)
+                                cursor_shape++;
+                            else
+                                cursor_shape = 0;
+                        }
                     }
+                    last_stroke_time = SDL_GetTicks();
                 }
                 break;
             }            
@@ -132,7 +149,14 @@ int main(int argc, const char* argv[])
         
         camera_update(&camera, &editor);
         render_editor(renderer, font, &editor, window, &camera, (SDL_Color) {.r = 255, .g = 0, .b = 255, .a = 255}, FONT_SCALE);
-        render_cursor(renderer, font, &editor, window, camera.pos, (SDL_Color) {255, 255, 255, 255}, (SDL_Color) {0, 0, 0, 255});
+
+
+        if (SDL_GetTicks() - last_stroke_time < blink_threshold_ms)
+            render_cursor(renderer, font, &editor, window, camera.pos, (SDL_Color) {255, 255, 255, 255}, (SDL_Color) {0, 0, 0, 255}, cursor_shape);
+
+        // we can generate an on/off cycles for the cursor to simulate the blinking
+         else if (((int)floor(SDL_GetTicks() / cursor_period_ms) % 2))
+            render_cursor(renderer, font, &editor, window, camera.pos, (SDL_Color) {255, 255, 255, 255}, (SDL_Color) {0, 0, 0, 255}, cursor_shape);
 
         // update the screen
         SDL_RenderPresent(renderer);

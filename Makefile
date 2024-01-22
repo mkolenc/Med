@@ -5,7 +5,7 @@ BIN = med
 CC = gcc
 IDIRS = `pkg-config --cflags sdl2` -I/usr/include/SDL2 -I./include # sdl, ttf, ./include
 LDIRS = -L/usr/lib/x86_64-linux-gnu # ttf
-LIBS = `pkg-config --libs sdl2` $(LDIRS) -lSDL2_ttf
+LIBS = `pkg-config --libs sdl2` $(LDIRS) -lSDL2_ttf -lm #added lm
 
 CFLAGS = -Wall -Wextra -std=c11 $(IDIRS)
 

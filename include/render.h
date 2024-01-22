@@ -10,6 +10,12 @@
 #include "vec.h"
 #include "camera.h"
 
+typedef enum {
+      CURSOR_BAR,
+      CURSOR_BOX,
+      CURSOR_UNDERSCORE,
+  } CursorShape; // this doesn't belong in here, but is for now
+
 /*
  *  Purpose: Render a single character to the window using a specified font and position.
  *
@@ -86,6 +92,6 @@ void render_editor(SDL_Renderer* renderer, Font* font, Editor* editor, SDL_Windo
  *
  *  Returns: None.
  */
-void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Window* window, Vec2f camera_pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color);
+void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Window* window, Vec2f camera_pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color, CursorShape cursor_shape);
 
 #endif /* RENDER_H_ */

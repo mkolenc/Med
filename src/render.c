@@ -154,23 +154,59 @@ void render_editor(SDL_Renderer* renderer, Font* font, Editor* editor, SDL_Windo
  *
  *  Returns: None.
  */
-void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Window* window, Vec2f camera_pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
+void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Window* window, Vec2f camera_pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color, CursorShape cursor_shape)
 {
+
     Vec2f pos = camera_get_projection_point(vec2f(editor->cursor_col * FONT_WIDTH * FONT_SCALE, editor->cursor_row * FONT_HEIGHT * FONT_SCALE), camera_pos, window);
 
-    SDL_Rect dst = {
-        .x = pos.x,
-        .y = pos.y,
-        .w = FONT_WIDTH * FONT_SCALE,
-        .h = FONT_HEIGHT * FONT_SCALE,
-    };
+    switch (cursor_shape) {
+        case CURSOR_BOX: {
+            SDL_Rect dst = {
+                .x = pos.x,
+                .y = pos.y,
+                .w = FONT_WIDTH * FONT_SCALE,
+                .h = FONT_HEIGHT * FONT_SCALE,
+            };
 
-    utils_scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
-    utils_scc(SDL_RenderFillRect(renderer, &dst));
-    
-    const char* c = text_under_cursor(editor);
-    if (c != NULL) {
-        set_texture_color(font->spritesheet, text_beneath_cursor_color);
-        render_char(renderer, font, *c, vec2f(dst.x, dst.y), FONT_SCALE);
+            utils_scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
+            utils_scc(SDL_RenderFillRect(renderer, &dst));
+
+            const char* c = text_under_cursor(editor);
+            if (c != NULL) {
+                set_texture_color(font->spritesheet, text_beneath_cursor_color);
+                render_char(renderer, font, *c, vec2f(dst.x, dst.y), FONT_SCALE);
+            }
+        }
+        break;
+
+        case CURSOR_BAR: {
+            const int bar_width = 1;
+
+            SDL_Rect dst = {
+                .x = pos.x,
+                .y = pos.y,
+                .w = bar_width * FONT_SCALE,
+                .h = FONT_HEIGHT * FONT_SCALE,
+            };
+
+            utils_scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
+            utils_scc(SDL_RenderFillRect(renderer, &dst));
+        }
+        break;
+
+        case CURSOR_UNDERSCORE: {
+            const int underscore_height = 2;
+
+            SDL_Rect dst = {
+                .x = pos.x,
+                .y = pos.y + (FONT_HEIGHT * FONT_SCALE) - underscore_height,
+                .w = FONT_WIDTH * FONT_SCALE,
+                .h = underscore_height * FONT_SCALE,
+            };
+
+            utils_scc(SDL_SetRenderDrawColor(renderer, cursor_color.r, cursor_color.g, cursor_color.b, cursor_color.a));
+            utils_scc(SDL_RenderFillRect(renderer, &dst));
+        }
+        break;
     }
 }
