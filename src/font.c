@@ -40,7 +40,8 @@ static SDL_Surface* create_font_surface(const char* file_path)
 }
 
 /*
- *  Purpose: Load a font from a TrueType Font (TTF) file.
+ *  Purpose: Load a font from a TrueType Font (TTF) file. The font should be released
+ *           with 'font_free_ttf' when no longer needed.
  *
  *  Parameters:
  *    - renderer: The SDL renderer to create the font texture on.

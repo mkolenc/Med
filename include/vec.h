@@ -58,27 +58,15 @@ Vec2f vec2f_add(Vec2f a, Vec2f b);
 Vec2f vec2f_sub(Vec2f a, Vec2f b);
 
 /*
- *  Purpose: Multiply two 2D vectors element-wise.
+ *  Purpose: Scales a vector.
  *
  *  Parameters:
- *    - a: The first 2D vector to be multiplied.
- *    - b: The second 2D vector to be multiplied.
+ *    - a: The first 2D vector to be scaled.
+ *    - b: The value that a is to be scaled by.
  *
  *  Returns:
- *    - The result of multiplying the two input vectors element-wise.
+ *    - The result of a scaled by b.
  */
-Vec2f vec2f_mul(Vec2f a, Vec2f b);
-
-/*
- *  Purpose: Divide one 2D vector by another element-wise.
- *
- *  Parameters:
- *    - a: The 2D vector to be divided.
- *    - b: The 2D vector by which to divide.
- *
- *  Returns:
- *    - The result of dividing the first vector by the second element-wise.
- */
-Vec2f vec2f_div(Vec2f a, Vec2f b);
+Vec2f vec2f_scale(Vec2f a, float b);
 
 #endif /* VECTOR_H_ */

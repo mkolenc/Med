@@ -9,15 +9,19 @@
 #include "render.h"
 #include "vec.h"
 #include "editor.h"
+#include "camera.h"
 
 // Dependencies
 #include "SDL.h"
 #include "SDL_ttf.h"
 
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 600
+
 // TODO: Change how you save a file to ctr + s
 // TODO: Jump forward/backward by a word
 // TODO: Delete a word
-// TODOinking cursor: Bl
+// TODO: Blinking cursor when inactive
 // TODO: Delete line
 
 int main(int argc, const char* argv[])
@@ -26,7 +30,7 @@ int main(int argc, const char* argv[])
     utils_scc((TTF_Init()));
 
     SDL_Window* window =
-        utils_scp(SDL_CreateWindow("Text Editor", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_RESIZABLE));
+        utils_scp(SDL_CreateWindow("Text Editor", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE));
 
     SDL_Renderer* renderer =
         utils_scp(SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED));
@@ -34,6 +38,7 @@ int main(int argc, const char* argv[])
     Font* font = font_load_ttf(renderer, "./font/VictorMono-Regular.ttf");
 
     Editor editor = {0};
+    Camera camera = {0};
 
     // Temporary way to load in files from command line arguments
     const char* file_path = argc > 1 ? argv[1] : NULL;
@@ -51,7 +56,9 @@ int main(int argc, const char* argv[])
     }
 
     bool quit = false;
-    while (!quit) { 
+    while (!quit) {
+        // start of the frame time
+        Uint32 frame_start_time_ms = SDL_GetTicks();
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -109,9 +116,9 @@ int main(int argc, const char* argv[])
                         case SDLK_F2: {
                             if (file_path != NULL) {
                                 editor_save_to_file(&editor, file_path);
-				puts("Saved!");
+				puts("Save successful!");
                             } else
-                                fprintf(stderr, "Usage: ./med [FILE-PATH]\n");
+                                fprintf(stderr, "Usage: ./te [FILE-PATH]\n");
                         }
                         break;
                     }
@@ -119,18 +126,18 @@ int main(int argc, const char* argv[])
                 break;
             }            
         }
-        utils_scc((SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0)));
+        // clear the screen
+        utils_scc((SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)));
         utils_scc((SDL_RenderClear(renderer)));
+        
+        camera_update(&camera, &editor);
+        render_editor(renderer, font, &editor, window, &camera, (SDL_Color) {.r = 255, .g = 0, .b = 255, .a = 255}, FONT_SCALE);
+        render_cursor(renderer, font, &editor, window, camera.pos, (SDL_Color) {255, 255, 255, 255}, (SDL_Color) {0, 0, 0, 255});
 
-        for (size_t i = 0; i < editor.size; i++) {
-            render_text_segment(renderer, font, editor.lines[i].chars, editor.lines[i].size,
-                                vec2f(0, i * FONT_HEIGHT * FONT_SCALE),
-                                (SDL_Color) {.r = 255, .g = 255, .b = 255, .a = 255},
-                                FONT_SCALE);
-        }
-        render_cursor(renderer, font, &editor, (SDL_Color) {255, 255, 255, 255}, (SDL_Color) {0, 0, 0, 255});
-
+        // update the screen
         SDL_RenderPresent(renderer);
+        
+        camera_cap_fps(SDL_GetTicks() - frame_start_time_ms);
     }
     utils_clean_up(window, renderer, font, &editor);
     

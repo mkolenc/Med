@@ -42,11 +42,11 @@ void* utils_cp(void* ptr);
  *  Purpose: Perform cleanup by freeing resources and quitting SDL and related libraries.
  *
  *  Parameters:
- *    - window: A pointer to an SDL window to be destroyed.
- *    - renderer: A pointer to an SDL renderer to be destroyed.
- *    - font: A pointer to a Font structure to be freed.
- *    - editor: A pointer to an Editor structure to be freed.
- *
+ *    - window: A pointer to an SDL window to be destroyed (Can be NULL).
+ *    - renderer: A pointer to an SDL renderer to be destroyed (Can be NULL).
+ *    - font: A pointer to a Font structure to be freed (Can be NULL).
+ *    - editor: A pointer to an Editor structure to be freed (Can be NULL).
+ * 
  *  Returns: None.
  */
 void utils_clean_up(SDL_Window* window, SDL_Renderer* renderer, Font* font, Editor* editor);

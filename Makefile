@@ -10,7 +10,7 @@ LIBS = `pkg-config --libs sdl2` $(LDIRS) -lSDL2_ttf
 CFLAGS = -Wall -Wextra -std=c11 $(IDIRS)
 
 # Source files and object files
-SRC = main.c utils.c font.c render.c vec.c line.c editor.c
+SRC = main.c utils.c font.c render.c vec.c line.c editor.c camera.c
 OBJ = $(SRC:.c=.o)
 
 # The search path for all files not found in the current directory
@@ -22,7 +22,7 @@ $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) -o $(BIN) $(OBJ) $(LIBS)
 
 # %< is a magic variable and regers to the first dep
-main.o: main.c utils.h font.h vec.h editor.h render.h
+main.o: main.c utils.h font.h vec.h editor.h render.h camera.h
 	$(CC) $(CFLAGS) -c $<
 
 utils.o: utils.c utils.h font.h editor.h
@@ -34,13 +34,16 @@ vec.o: vec.c vec.h
 font.o: font.c font.h utils.h
 	$(CC) $(CFLAGS) -c $<
 
-render.o: render.c render.h editor.h utils.h font.h vec.h
+render.o: render.c render.h editor.h utils.h font.h vec.h camera.h
 	$(CC) $(CFLAGS) -c $<
 
 line.o: line.c line.h utils.h
 	$(CC) $(CFLAGS) -c $<
 
 editor.o: editor.c editor.h line.h utils.h
+	$(CC) $(CFLAGS) -c $<
+
+camera.o: camera.c camera.h editor.h font.h
 	$(CC) $(CFLAGS) -c $<
 
 

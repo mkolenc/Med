@@ -1,5 +1,7 @@
 /*
 *  The operations and data structure of the text editor.
+*  These functions are designed to workd with editors that have been zero-initialized.
+*  The editors should be freed using 'editor_free' when they are no longer needed.
 */
 #include <assert.h>
 #include <string.h>
@@ -74,18 +76,18 @@ static void editor_handle_first_line(Editor* editor)
 }
 
 /*
- *  Purpose: Insert text before the cursor in the Editor's current line.
+ *  Purpose: Insert a null-terminated string before the cursor position in the Editor's current line.
  *
  *  Parameters:
  *    - editor: Pointer to the Editor structure.
- *    - text: The text to be inserted.
+ *    - text: Null-terminated string to insert.
  * 
  *  Returns: None.
  */
 void editor_insert_text_before_cursor(Editor* editor, char* text)
 {
     editor_handle_first_line(editor);
-    line_insert_text_before_cursor(&editor->lines[editor->cursor_row], text, &editor->cursor_col);
+    line_insert_text_before_cursor(editor->lines + editor->cursor_row, text, &editor->cursor_col);
     last_input = SDL_TEXTINPUT;
 }
 
@@ -97,7 +99,7 @@ void editor_insert_text_before_cursor(Editor* editor, char* text)
  * 
  *  Returns: None.
  */
-void editor_backspace(Editor *editor) 
+void editor_backspace(Editor* editor) 
 {
     editor_handle_first_line(editor);
 
@@ -142,7 +144,7 @@ void editor_backspace(Editor *editor)
  * 
  *  Returns: None.
  */
-void editor_delete(Editor *editor)
+void editor_delete(Editor* editor)
 {
     editor_handle_first_line(editor);
 
@@ -176,6 +178,7 @@ void editor_delete(Editor *editor)
 
     last_input = SDLK_DELETE;
 }
+
 /*
  *  Purpose: Move the cursor one position to the left in the Editor.
  *
@@ -394,7 +397,7 @@ void editor_load_from_file(Editor* editor, FILE* fp)
     bool new_line = true;
 
     while (!feof(fp)) {
-        size_t bytes_read = fread(chunk, 1, EDITOR_INIT_CAPACITY * LINE_INIT_CAPACITY, fp);
+        size_t bytes_read = fread(chunk, 1, sizeof(chunk), fp);
         char* line_start = chunk;
         char* line_end = memchr(chunk, '\n', bytes_read); // Similar to strchr but bounded by bytes_read
 

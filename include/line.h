@@ -1,5 +1,7 @@
 /*
- *  Functions for manipulating text lines
+ *  Functions for manipulating text lines.
+ *  These functions are designed to workd with lines that have been zero-initialized.
+ *  The lines should be freed using 'line_free' when they are no longer needed.
  */
 #ifndef LINE_H_
 #define LINE_H_
@@ -15,7 +17,6 @@ typedef struct {
     size_t size;
     char* chars;
 } Line;
-
 
 /*
  *  Purpose: Expand the capacity of a Line structure to accommodate additional characters.
@@ -89,6 +90,9 @@ void line_append_text(Line* line, char* text);
 /*
  *  Purpose: Append a text segment of a specified size to the end of a Line structure.
  *
+ *  Preconditions: The size of the text segment (text_size) must not exceed the length of the text. 
+ *  Note: The implementation allows for non-null-terminated char arrays.
+ * 
  *  Parameters:
  *    - line: Pointer to the Line structure to append text to.
  *    - text: Pointer to the text segment to append.

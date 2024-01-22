@@ -10,6 +10,7 @@
 #include "font.h"
 #include "vec.h"
 #include "SDL.h"
+#include "camera.h"
 
 /*
  *  Purpose: Render a single character to the window using a specified font and position.
@@ -54,8 +55,11 @@ static void set_texture_color(SDL_Texture* texture, SDL_Color color)
     utils_scc(SDL_SetTextureAlphaMod(texture, color.a));
 }
 
-/**
+/*
  *  Purpose: Render a substring of text on the screen using a specified font, color, and position.
+ *
+ *  Preconditions: The size of the text segment (text_size) must not exceed the length of the text. 
+ *  Note: The implementation allows for non-null-terminated char arrays.
  *
  *  Parameters:
  *    - renderer: Pointer to the SDL renderer where the text is rendered.
@@ -117,6 +121,28 @@ static char* text_under_cursor(Editor* editor)
 }
 
 /*
+ *  Purpose: Render text lines in the editor using camera projection.
+ *
+ *  Parameters:
+ *    - renderer: Pointer to the SDL renderer for rendering operations.
+ *    - font: Pointer to the Font structure for rendering text.
+ *    - editor: Pointer to the Editor structure containing text lines to be rendered.
+ *    - window: Pointer to the SDL window to determine screen dimensions.
+ *    - camera: Pointer to the Camera structure for camera projection adjustment.
+ *    - text_color: SDL_Color specifying the color of the rendered text.
+ *    - scale: Scaling factor for adjusting the text size.
+ *
+ *  Returns: None.
+ */
+void render_editor(SDL_Renderer* renderer, Font* font, Editor* editor, SDL_Window* window, Camera* camera, SDL_Color text_color, float scale)
+{
+    for (size_t i = 0; i < editor->size; i++) {
+        Vec2f line_pos = camera_get_projection_point(vec2f(0.0f, i * FONT_HEIGHT * FONT_SCALE), camera->pos, window);
+        render_text_segment(renderer, font, editor->lines[i].chars, editor->lines[i].size, line_pos, text_color, scale);
+    }
+}
+
+/*
  *  Purpose: Render the cursor at the current cursor position in the text editor using specified colors.
  *
  *  Parameters:
@@ -128,11 +154,13 @@ static char* text_under_cursor(Editor* editor)
  *
  *  Returns: None.
  */
-void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
+void render_cursor(SDL_Renderer* renderer, const Font* font, Editor* editor, SDL_Window* window, Vec2f camera_pos, SDL_Color cursor_color, SDL_Color text_beneath_cursor_color)
 {
+    Vec2f pos = camera_get_projection_point(vec2f(editor->cursor_col * FONT_WIDTH * FONT_SCALE, editor->cursor_row * FONT_HEIGHT * FONT_SCALE), camera_pos, window);
+
     SDL_Rect dst = {
-        .x = editor->cursor_col * FONT_WIDTH * FONT_SCALE,
-        .y = editor->cursor_row * FONT_HEIGHT * FONT_SCALE,
+        .x = pos.x,
+        .y = pos.y,
         .w = FONT_WIDTH * FONT_SCALE,
         .h = FONT_HEIGHT * FONT_SCALE,
     };

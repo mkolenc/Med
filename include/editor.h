@@ -1,15 +1,17 @@
 /*
 *  The operations and data structure of the text editor.
+*  These functions are designed to workd with editors that have been zero-initialized.
+*  The editors should be freed using 'editor_free' when they are no longer needed.
 */
 #ifndef EDITOR_H_
 #define EDITOR_H_
 
+#include <stdio.h>
 #include "line.h"
 
 #define EDITOR_INIT_CAPACITY 128
 
 // TODO: when saving files, convert TAB_STOP spaces into  a '\t' char to save space, then fix the save file function to correct for this
-
 
 // Sequence of lines but actually a stretchy buffer as it
 // reallocates as you push more lines onto it
@@ -22,11 +24,11 @@ typedef struct {
 } Editor;
 
 /*
- *  Purpose: Insert text before the cursor in the Editor's current line.
+ *  Purpose: Insert a null-terminated string before the cursor position in the Editor's current line.
  *
  *  Parameters:
  *    - editor: Pointer to the Editor structure.
- *    - text: The text to be inserted.
+ *    - text: Null-terminated string to insert
  * 
  *  Returns: None.
  */

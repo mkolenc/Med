@@ -17,21 +17,21 @@
 #define POINT_SIZE 32
 
 #define FONT_SCALE 1.0f
-
 typedef struct {
   SDL_Texture* spritesheet;
   SDL_Rect glyphs[NUM_GLYPHS];
 } Font;
 
 /*
- *  Purpose: Load a font from a TrueType Font (TTF) file.
+ *  Purpose: Load a font from a TrueType Font (TTF) file. The font should be released
+ *           with 'font_free_ttf' when no longer needed.
  *
  *  Parameters:
  *    - renderer: The SDL renderer to create the font texture on.
  *    - file_path: Path to the TrueType Font (TTF) file.
  *
  *  Returns:
- *    - A Font structure containing the font texture and glyph position.
+ *    - A Font structure containing the font texture and glyphs position.
  */
 Font* font_load_ttf(SDL_Renderer* renderer, const char* file_path);
 
